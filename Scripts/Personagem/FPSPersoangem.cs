@@ -13,7 +13,7 @@ public class FPSPersoangem : MonoBehaviour {
 	// Vars de Velocidade
 	public float velocidadeAndando = 6.7f;
 	public float velocidadeCorrendo = 10.0f;
-	public float pulo = 8f;
+	public float alturaPulo = 8f;
 	public float gravidade = 20f;
 
 	private float velocidade;
@@ -45,12 +45,20 @@ public class FPSPersoangem : MonoBehaviour {
 	private bool estaAgachado;
 	private float velocidadeAgachado = 3.15f;
 
+    // Animacões
+
+    private Animator animator;
+    private GameObject arma;
+
 	// Use this for initialization
 	void Start () {
 		fpsView = transform.Find ("FPS Visao").transform;
 		charController = GetComponent<CharacterController> ();
 		velocidade = velocidadeAndando;
 		seMovendo = false;
+        animator = transform.Find("Modelo").gameObject.GetComponent<Animator>();
+        arma = transform.Find("FPS Visao").transform.Find("Main Camera").transform.Find("Arma").gameObject;
+
 
 		rayDistance = charController.height * 0.5f + charController.radius;
 		alturaPadrao = charController.height;
@@ -59,8 +67,9 @@ public class FPSPersoangem : MonoBehaviour {
 	
 	// Update is called once per frame
 	void Update () {
-		Movimento ();	
-	}
+		Movimento ();
+        AnimacoesFPS();
+    }
 
 	void Movimento(){
 		// Detectando movimento no Eixo Y
@@ -97,11 +106,15 @@ public class FPSPersoangem : MonoBehaviour {
 			AgachaECorre ();
 			direcaoMovimento = new Vector3 (inputX * fator,-antiToque,inputY * fator);
 			direcaoMovimento = transform.TransformDirection (direcaoMovimento) * velocidade;
+			Pulo ();
 		}
 		direcaoMovimento.y -= gravidade * Time.deltaTime;
 
 		noChao = (charController.Move (direcaoMovimento * Time.deltaTime) & CollisionFlags.Below) != 0;
 		seMovendo = charController.velocity.magnitude > 0.15f;
+
+        AnimacoesAndando();
+        AnimacoesPulo();
 	}
 
 
@@ -122,13 +135,15 @@ public class FPSPersoangem : MonoBehaviour {
 		if (estaAgachado) {
 			velocidade = velocidadeAgachado;
 		} else {
-			if(Input.GetKeyDown(KeyCode.LeftShift)){
+			if(Input.GetKey(KeyCode.Z)){
 				velocidade = velocidadeCorrendo;
 			}else{
 				velocidade = velocidadeAndando;
 			}
 		}
-	}
+
+        AnimacoesAgachado();
+    }
 
 	bool podeSeLevantar(){
 		Ray rayTopo = new Ray (transform.position,transform.up);
@@ -155,6 +170,54 @@ public class FPSPersoangem : MonoBehaviour {
 		yield return null;
 				
 	}
+
+	void Pulo(){
+	
+		if(Input.GetKeyDown(KeyCode.Space)){
+			if (estaAgachado) {
+
+				if (podeSeLevantar ()) {
+					estaAgachado = false;
+					StopCoroutine (MoveCamera());
+					StartCoroutine (MoveCamera ());
+				}
+
+			} else {
+				direcaoMovimento.y = alturaPulo;
+			}
+		}
+
+        AnimacoesAgachado();
+	
+	}
+
+    void AnimacoesAndando()
+    {
+        animator.SetFloat("VelocidadeX", charController.velocity.magnitude);
+    }
+
+    void AnimacoesPulo()
+    {
+        animator.SetFloat("Altura", charController.velocity.y);
+    }
+
+    void AnimacoesAgachado()
+    {
+        animator.SetBool("Agachado", estaAgachado);
+    }
+
+    void AnimacoesFPS()
+    {
+        if (seMovendo)
+        {
+            arma.GetComponent<Animator>().SetBool("Andando", true);
+        }
+        else
+        {
+            arma.GetComponent<Animator>().SetBool("Andando", false);
+        }
+        
+    }
 }
 
 
